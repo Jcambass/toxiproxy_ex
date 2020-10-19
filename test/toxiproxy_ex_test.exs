@@ -1,6 +1,6 @@
 defmodule ToxiproxyExTest do
   use ExUnit.Case
-  doctest ToxiproxyEx
+  doctest ToxiproxyEx, except: [version!: 0]
 
   import ToxiproxyEx.TestHelpers
   import ToxiproxyEx.ProxyAssertions
