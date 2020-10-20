@@ -4,6 +4,8 @@
 
 <!-- MDOC !-->
 
+ToxiproxyEx is an Elixir API client for the resilience testing tool Toxiproxy.
+
 [Toxiproxy](https://github.com/shopify/toxiproxy) is a proxy to simulate network
 and system conditions. The Elixir API aims to make it simple to write tests that
 ensure your application behaves appropriately under harsh conditions. Before you
