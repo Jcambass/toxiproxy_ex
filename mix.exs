@@ -1,6 +1,8 @@
 defmodule ToxiproxyEx.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/Jcambass/toxiproxy_ex"
+
   def project do
     [
       app: :toxiproxy_ex,
@@ -19,14 +21,12 @@ defmodule ToxiproxyEx.MixProject do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger]
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
       {:tesla, "~> 1.3.0"},
@@ -42,7 +42,10 @@ defmodule ToxiproxyEx.MixProject do
     [
       maintainers: ["Joel Colin Ambass"],
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/Jcambass/toxiproxy_ex"},
+      links: %{
+        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "GitHub" => @source_url
+      },
       files: ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib)
     ]
   end
@@ -50,7 +53,7 @@ defmodule ToxiproxyEx.MixProject do
   defp docs do
     [
       main: "ToxiproxyEx",
-      source_url: "https://github.com/Jcambass/toxiproxy_ex",
+      source_url: @source_url,
       extras: ["README.md"]
     ]
   end
