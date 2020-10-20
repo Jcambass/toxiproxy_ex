@@ -1,6 +1,11 @@
 # ToxiproxyEx
 
-[Online Documentation](https://hexdocs.pm/toxiproxy_ex).
+[![github.com](https://github.com/Jcambass/toxiproxy_ex/workflows/.github/workflows/main.yml/badge.svg)](https://github.com/Jcambass/toxiproxy_ex/actions)
+[![hex.pm](https://img.shields.io/hexpm/v/toxiproxy_ex.svg)](https://hex.pm/packages/toxiproxy_ex)
+[![hexdocs.pm](https://img.shields.io/badge/api-docs-lightgreen.svg)](https://hexdocs.pm/toxiproxy_ex/api-reference.html)
+[![hex.pm](https://img.shields.io/hexpm/dt/toxiproxy_ex.svg)](https://hex.pm/packages/toxiproxy_ex)
+[![hex.pm](https://img.shields.io/hexpm/l/toxiproxy_ex.svg)](https://hex.pm/packages/toxiproxy_ex)
+[![github.com](https://img.shields.io/github/last-commit/Jcambass/toxiproxy_ex.svg)](https://github.com/Jcambass/toxiproxy_ex/commits/main)
 
 <!-- MDOC !-->
 
