@@ -253,11 +253,13 @@ defmodule ToxiproxyExTest do
       ToxiproxyEx.create!(upstream: upstream, listen: "localhost:8888", name: "test_echo_proxy")
 
       %ToxicCollection{proxies: proxies} =
-        ToxiproxyEx.populate!([%{
-          name: "test_echo_proxy",
-          upstream: upstream,
-          listen: "localhost:5555"
-        }])
+        ToxiproxyEx.populate!([
+          %{
+            name: "test_echo_proxy",
+            upstream: upstream,
+            listen: "localhost:5555"
+          }
+        ])
 
       assert Enum.count(proxies) == 1
 
@@ -273,10 +275,12 @@ defmodule ToxiproxyExTest do
       new_upstream = "localhost:#{port2}"
 
       %ToxicCollection{proxies: proxies} =
-        ToxiproxyEx.populate!([%{
-          name: "test_echo_proxy",
-          upstream: new_upstream
-        }])
+        ToxiproxyEx.populate!([
+          %{
+            name: "test_echo_proxy",
+            upstream: new_upstream
+          }
+        ])
 
       assert Enum.count(proxies) == 1
       assert %Proxy{upstream: ^new_upstream, name: "test_echo_proxy"} = hd(proxies)
