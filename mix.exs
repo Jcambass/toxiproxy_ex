@@ -34,7 +34,7 @@ defmodule ToxiproxyEx.MixProject do
       {:castore, "~> 0.1.0"},
       {:mint, "~> 1.0"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
     ]
   end
 

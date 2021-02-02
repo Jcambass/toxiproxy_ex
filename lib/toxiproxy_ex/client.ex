@@ -52,8 +52,10 @@ defmodule ToxiproxyEx.Client do
   end
 
   defp client() do
+    url = Application.get_env(:toxiproxy_ex, :host, "http://127.0.0.1:8474")
+
     middleware = [
-      {Tesla.Middleware.BaseUrl, "http://127.0.0.1:8474"},
+      {Tesla.Middleware.BaseUrl, url},
       Tesla.Middleware.JSON
     ]
 

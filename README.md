@@ -19,7 +19,10 @@ README](https://github.com/shopify/toxiproxy#usage).
 
 ## Usage
 
-The Elixir client communicates with the Toxiproxy daemon via HTTP on `http://127.0.0.1:8474`.
+By default the Elixir client communicates with the Toxiproxy daemon via HTTP on `http://127.0.0.1:8474`, but you can point to any host via your application configuration:
+```elixir
+config :toxiproxy_ex, host: "http://toxiproxy.local:8844"
+```
 
 For example, to simulate 1000ms latency on a database server you can use the
 `latency` toxic with the `latency` argument (see the Toxiproxy project for a

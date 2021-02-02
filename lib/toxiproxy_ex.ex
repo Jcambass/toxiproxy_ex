@@ -25,7 +25,12 @@ defmodule ToxiproxyEx do
   @typedoc """
   A map containing fields required to setup a proxy. Designed to be used with `ToxiproxyEx.populate!/1`.
   """
-  @type proxy_map :: %{required(:name) => String.t(), required(:upstream) => host_with_port(), optional(:listen) => host_with_port(), optional(:enabled) => true | false}
+  @type proxy_map :: %{
+          required(:name) => String.t(),
+          required(:upstream) => host_with_port(),
+          optional(:listen) => host_with_port(),
+          optional(:enabled) => true | false
+        }
 
   @doc """
   Creates a proxy on the toxiproxy server.
@@ -322,7 +327,7 @@ defmodule ToxiproxyEx do
       ...>  nil
       ...> end)
   """
-  @spec apply!(toxic_collection(), (-> any())) :: :ok
+  @spec apply!(toxic_collection(), (() -> any())) :: :ok
   def apply!(%ToxicCollection{toxics: toxics}, fun) do
     dups =
       Enum.group_by(toxics, fn t -> [t.name, t.proxy_name] end)
@@ -381,7 +386,7 @@ defmodule ToxiproxyEx do
       ...>  nil
       ...> end)
   """
-  @spec down!(toxic_collection(), (-> any())) :: :ok
+  @spec down!(toxic_collection(), (() -> any())) :: :ok
   def down!(proxy = %Proxy{}, fun) do
     down!(ToxicCollection.new(proxy), fun)
   end
