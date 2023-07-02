@@ -2,65 +2,56 @@ defmodule ToxiproxyEx.Client do
   @moduledoc false
 
   def reset() do
-    client()
-    |> Tesla.post("/reset", %{})
+    url("/reset")
+    |> Req.post(json: %{})
   end
 
   def version() do
-    client()
-    |> Tesla.get("/version")
+    url("/version")
+    |> Req.get()
   end
 
   def list_proxies() do
-    client()
-    |> Tesla.get("/proxies")
+    url("/proxies")
+    |> Req.get()
   end
 
   def create_proxy(params) do
-    client()
-    |> Tesla.post("/proxies", params)
+    url("/proxies")
+    |> Req.post(json: params)
   end
 
   def destroy_proxy(name) do
-    client()
-    |> Tesla.delete("/proxies/#{name}")
+    url("/proxies/#{name}")
+    |> Req.delete()
   end
 
   def enable_proxy(name) do
-    client()
-    |> Tesla.post("/proxies/#{name}", %{enabled: true})
+    url("/proxies/#{name}")
+    |> Req.post(json: %{enabled: true})
   end
 
   def disable_proxy(name) do
-    client()
-    |> Tesla.post("/proxies/#{name}", %{enabled: false})
+    url("/proxies/#{name}")
+    |> Req.post(json: %{enabled: false})
   end
 
   def list_toxics(proxy_name) do
-    client()
-    |> Tesla.get("/proxies/#{proxy_name}/toxics")
+    url("/proxies/#{proxy_name}/toxics")
+    |> Req.get()
   end
 
   def create_toxic(proxy_name, params) do
-    client()
-    |> Tesla.post("/proxies/#{proxy_name}/toxics", params)
+    url("/proxies/#{proxy_name}/toxics")
+    |> Req.post(json: params)
   end
 
   def destroy_toxic(proxy_name, toxic_name) do
-    client()
-    |> Tesla.delete("/proxies/#{proxy_name}/toxics/#{toxic_name}")
+    url("/proxies/#{proxy_name}/toxics/#{toxic_name}")
+    |> Req.delete()
   end
 
-  defp client() do
-    url = Application.get_env(:toxiproxy_ex, :host, "http://127.0.0.1:8474")
-
-    middleware = [
-      {Tesla.Middleware.BaseUrl, url},
-      Tesla.Middleware.JSON
-    ]
-
-    adapter = {Tesla.Adapter.Mint, []}
-
-    Tesla.client(middleware, adapter)
+  defp url(path) do
+    Application.get_env(:toxiproxy_ex, :host, "http://127.0.0.1:8474") <> path
   end
 end
