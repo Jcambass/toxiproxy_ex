@@ -31,7 +31,7 @@ defmodule ToxiproxyEx.MixProject do
     [
       {:tesla, "~> 1.7.0"},
       {:jason, ">= 1.0.0"},
-      {:castore, "~> 0.1.0"},
+      {:castore, "~> 1.0.3"},
       {:mint, "~> 1.0"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
