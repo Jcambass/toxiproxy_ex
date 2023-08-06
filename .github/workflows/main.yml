@@ -12,6 +12,7 @@ jobs:
       - uses: erlef/setup-beam@v1
         with:
           version-file: .tool-versions
+          version-type: strict
       - run: curl --silent -L https://github.com/Shopify/toxiproxy/releases/download/v2.1.2/toxiproxy-server-linux-amd64 -o ./toxiproxy-server
       - run: chmod +x ./toxiproxy-server
       - run: nohup bash -c "./toxiproxy-server > ./toxiproxy.log 2>&1 &"
