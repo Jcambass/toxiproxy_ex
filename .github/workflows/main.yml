@@ -10,9 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-beam@v1
-        with:
-          otp-version: '23.2'
-          elixir-version: '1.11.3'
       - run: curl --silent -L https://github.com/Shopify/toxiproxy/releases/download/v2.1.2/toxiproxy-server-linux-amd64 -o ./toxiproxy-server
       - run: chmod +x ./toxiproxy-server
       - run: nohup bash -c "./toxiproxy-server > ./toxiproxy.log 2>&1 &"
