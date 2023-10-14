@@ -23,7 +23,8 @@ defmodule ToxiproxyEx.MixProject do
 
   def application do
     [
-      extra_applications: []
+      extra_applications: [],
+      env: [host: "http://127.0.0.1:8474"]
     ]
   end
 
