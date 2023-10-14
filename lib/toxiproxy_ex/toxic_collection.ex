@@ -5,9 +5,9 @@ defmodule ToxiproxyEx.ToxicCollection do
 
   @typedoc since: "1.2.0"
   @type t() :: %__MODULE__{
-    proxies: [Proxy.t()],
-    toxics: [Toxic.t()]
-  }
+          proxies: [Proxy.t()],
+          toxics: [Toxic.t()]
+        }
 
   defstruct proxies: [], toxics: []
 

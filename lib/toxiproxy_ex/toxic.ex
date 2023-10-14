@@ -49,14 +49,16 @@ defmodule ToxiproxyEx.Toxic do
 
   @spec create(t()) :: {:ok, t()} | :error
   def create(%__MODULE__{} = toxic) do
-    case Client.create_toxic(toxic.proxy_name, %{
-           name: toxic.name,
-           type: toxic.type,
-           stream: toxic.stream,
-           toxicity: toxic.toxicity,
-           attributes: toxic.attributes
-         }) do
-      {:ok, %{body: %{"attributes" => attributes, "toxicity" => toxicity}}} ->
+    body = %{
+      name: toxic.name,
+      type: toxic.type,
+      stream: toxic.stream,
+      toxicity: toxic.toxicity,
+      attributes: toxic.attributes
+    }
+
+    case Client.request(:post, "/proxies/#{toxic.proxy_name}/toxics", body) do
+      {:ok, %{"attributes" => attributes, "toxicity" => toxicity}} ->
         # Note: We update attributes and toxicity to ensure that our local representation is as close as possible to the data on the server.
         # We do not make use of those fields after `create` has been called but we update them anyway.
         {:ok,
@@ -69,16 +71,16 @@ defmodule ToxiproxyEx.Toxic do
            proxy_name: toxic.proxy_name
          )}
 
-      _res ->
+      {:error, _reason} ->
         :error
     end
   end
 
   @spec destroy(t()) :: :ok | :error
   def destroy(%__MODULE__{} = toxic) do
-    case Client.destroy_toxic(toxic.proxy_name, toxic.name) do
-      {:ok, _res} -> :ok
-      _ -> :error
+    case Client.request(:delete, "/proxies/#{toxic.proxy_name}/toxics/#{toxic.name}") do
+      {:ok, _body} -> :ok
+      {:error, _reason} -> :error
     end
   end
 end

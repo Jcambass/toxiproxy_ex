@@ -5,27 +5,27 @@ defmodule ToxiproxyEx.Proxy do
 
   @typedoc since: "1.2.0"
   @type t() :: %__MODULE__{
-    upstream: String.t(),
-    listen: String.t(),
-    name: String.t(),
-    enabled: boolean()
-  }
+          upstream: String.t(),
+          listen: String.t(),
+          name: String.t(),
+          enabled: boolean()
+        }
 
   defstruct upstream: nil, listen: nil, name: nil, enabled: nil
 
   @spec disable(t()) :: :ok | :error
   def disable(%__MODULE__{} = proxy) do
-    case Client.disable_proxy(proxy.name) do
-      {:ok, _res} -> :ok
-      _ -> :error
+    case Client.request(:post, "/proxies/#{proxy.name}", %{enabled: false}) do
+      {:ok, _body} -> :ok
+      {:error, _reason} -> :error
     end
   end
 
   @spec enable(t()) :: :ok | :error
   def enable(%__MODULE__{} = proxy) do
-    case Client.enable_proxy(proxy.name) do
-      {:ok, _res} -> :ok
-      _ -> :error
+    case Client.request(:post, "/proxies/#{proxy.name}", %{enabled: true}) do
+      {:ok, _body} -> :ok
+      {:error, _reason} -> :error
     end
   end
 
@@ -36,33 +36,35 @@ defmodule ToxiproxyEx.Proxy do
     name = Keyword.get(options, :name)
     enabled = Keyword.get(options, :enabled)
 
-    case Client.create_proxy(%{
-           upstream: upstream,
-           name: name,
-           listen: listen,
-           enabled: enabled
-         }) do
-      {:ok, %{body: %{"listen" => listen, "enabled" => enabled, "name" => name}}} ->
+    body = %{
+      upstream: upstream,
+      name: name,
+      listen: listen,
+      enabled: enabled
+    }
+
+    case Client.request(:post, "/proxies", body) do
+      {:ok, %{"listen" => listen, "enabled" => enabled, "name" => name}} ->
         {:ok, %__MODULE__{upstream: upstream, listen: listen, name: name, enabled: enabled}}
 
-      _ ->
+      {:error, _reason} ->
         :error
     end
   end
 
   @spec destroy(t()) :: :ok | :error
   def destroy(%__MODULE__{} = proxy) do
-    case Client.destroy_proxy(proxy.name) do
-      {:ok, _res} -> :ok
-      _ -> :error
+    case Client.request(:delete, "/proxies/#{proxy.name}") do
+      {:ok, _body} -> :ok
+      {:error, _reason} -> :error
     end
   end
 
   @spec toxics(t()) :: {:ok, [Toxic.t()]} | :error
   def toxics(%__MODULE__{} = proxy) do
-    case Client.list_toxics(proxy.name) do
-      {:ok, %{body: toxics}} -> {:ok, Enum.map(toxics, &parse_toxic(&1, proxy))}
-      _ -> :error
+    case Client.request(:get, "/proxies/#{proxy.name}/toxics") do
+      {:ok, _body = toxics} -> {:ok, Enum.map(toxics, &parse_toxic(&1, proxy))}
+      {:error, _reason} -> :error
     end
   end
 

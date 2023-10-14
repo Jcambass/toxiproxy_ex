@@ -1,62 +1,31 @@
 defmodule ToxiproxyEx.Client do
   @moduledoc false
 
-  def reset() do
-    client()
-    |> Tesla.post("/reset", %{})
-  end
+  alias Tesla.Env
 
-  def version() do
-    client()
-    |> Tesla.get("/version")
-  end
-
-  def list_proxies() do
-    client()
-    |> Tesla.get("/proxies")
-  end
-
-  def create_proxy(params) do
-    client()
-    |> Tesla.post("/proxies", params)
-  end
-
-  def destroy_proxy(name) do
-    client()
-    |> Tesla.delete("/proxies/#{name}")
-  end
-
-  def enable_proxy(name) do
-    client()
-    |> Tesla.post("/proxies/#{name}", %{enabled: true})
-  end
-
-  def disable_proxy(name) do
-    client()
-    |> Tesla.post("/proxies/#{name}", %{enabled: false})
-  end
-
-  def list_toxics(proxy_name) do
-    client()
-    |> Tesla.get("/proxies/#{proxy_name}/toxics")
-  end
-
-  def create_toxic(proxy_name, params) do
-    client()
-    |> Tesla.post("/proxies/#{proxy_name}/toxics", params)
-  end
-
-  def destroy_toxic(proxy_name, toxic_name) do
-    client()
-    |> Tesla.delete("/proxies/#{proxy_name}/toxics/#{toxic_name}")
-  end
-
-  defp client() do
-    middleware = [
+  @spec request(:get | :post | :delete, String.t(), map() | nil) ::
+          {:ok, response_body :: term()} | {:error, reason :: term()}
+  def request(method, path, params \\ nil)
+      when method in [:get, :post, :delete] and is_binary(path) do
+    middlewares = [
       {Tesla.Middleware.BaseUrl, Application.fetch_env!(:toxiproxy_ex, :host)},
       Tesla.Middleware.JSON
     ]
 
-    Tesla.client(middleware, {Tesla.Adapter.Mint, []})
+    client = Tesla.client(middlewares, {Tesla.Adapter.Mint, []})
+
+    request_opts = [method: method, url: path]
+    request_opts = if params, do: Keyword.put(request_opts, :body, params), else: request_opts
+
+    case Tesla.request(client, request_opts) do
+      {:ok, %Env{status: status, body: body}} when status in 200..299 ->
+        {:ok, body}
+
+      {:ok, %Env{} = env} ->
+        {:error, {:status, env}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 end

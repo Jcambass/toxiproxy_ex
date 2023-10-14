@@ -10,7 +10,7 @@ defmodule ToxiproxyEx do
   @typedoc """
   A proxy that intercepts traffic to and from an upstream server.
   """
-  @opaque proxy :: Proxy.t
+  @opaque proxy :: Proxy.t()
 
   @typedoc """
   A collection of proxies.
@@ -153,11 +153,10 @@ defmodule ToxiproxyEx do
   """
   @spec all!() :: toxic_collection()
   def all!() do
-    case Client.list_proxies() do
-      {:ok, %{body: proxies}} -> Enum.map(proxies, &parse_proxy/1)
-      _ -> raise ServerError, message: "Could not fetch proxies."
+    case Client.request(:get, "/proxies") do
+      {:ok, proxies} -> proxies |> Enum.map(&parse_proxy/1) |> ToxicCollection.new()
+      {:error, _reason} -> raise ServerError, message: "Could not fetch proxies."
     end
-    |> ToxicCollection.new()
   end
 
   defp parse_proxy(
@@ -323,7 +322,7 @@ defmodule ToxiproxyEx do
       ...>  nil
       ...> end)
   """
-  @spec apply!(toxic_collection(), (() -> any())) :: :ok
+  @spec apply!(toxic_collection(), (-> any())) :: :ok
   def apply!(%ToxicCollection{toxics: toxics}, fun) do
     dups =
       Enum.group_by(toxics, fn t -> [t.name, t.proxy_name] end)
@@ -353,9 +352,7 @@ defmodule ToxiproxyEx do
     else
       raise ArgumentError,
         message:
-          "There are multiple toxics with the name '#{hd(hd(dups)).name}' for proxy '#{
-            hd(hd(dups)).proxy_name
-          }', please override the default name (<type>_<direction>)"
+          "There are multiple toxics with the name '#{hd(hd(dups)).name}' for proxy '#{hd(hd(dups)).proxy_name}', please override the default name (<type>_<direction>)"
     end
   end
 
@@ -382,7 +379,7 @@ defmodule ToxiproxyEx do
       ...>  nil
       ...> end)
   """
-  @spec down!(toxic_collection(), (() -> any())) :: :ok
+  @spec down!(toxic_collection(), (-> any())) :: :ok
   def down!(proxy = %Proxy{}, fun) do
     down!(ToxicCollection.new(proxy), fun)
   end
@@ -420,9 +417,9 @@ defmodule ToxiproxyEx do
   """
   @spec reset!() :: :ok
   def reset!() do
-    case Client.reset() do
-      {:ok, _} -> :ok
-      _ -> raise ServerError, message: "Could not reset toxiproxy"
+    case Client.request(:post, "/reset", %{}) do
+      {:ok, _body} -> :ok
+      {:error, _reason} -> raise ServerError, message: "Could not reset toxiproxy"
     end
   end
 
@@ -439,9 +436,9 @@ defmodule ToxiproxyEx do
   """
   @spec version!() :: String.t()
   def version!() do
-    case Client.version() do
-      {:ok, %{body: res}} when is_binary(res) -> res
-      _ -> raise ServerError, message: "Could not fetch version"
+    case Client.request(:get, "/version") do
+      {:ok, vsn} when is_binary(vsn) -> vsn
+      {:error, _reason} -> raise ServerError, message: "Could not fetch version"
     end
   end
 
