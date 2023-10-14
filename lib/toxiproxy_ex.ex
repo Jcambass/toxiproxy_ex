@@ -10,12 +10,12 @@ defmodule ToxiproxyEx do
   @typedoc """
   A proxy that intercepts traffic to and from an upstream server.
   """
-  @opaque proxy :: %Proxy{}
+  @opaque proxy :: Proxy.t
 
   @typedoc """
   A collection of proxies.
   """
-  @opaque toxic_collection :: %ToxicCollection{}
+  @opaque toxic_collection :: ToxicCollection.t()
 
   @typedoc """
   A hostname or IP address including a port number, e.g. `localhost:4539`.
@@ -93,8 +93,6 @@ defmodule ToxiproxyEx do
         :error -> raise ServerError, message: "Could not destroy proxy"
       end
     end)
-
-    :ok
   end
 
   @doc """
@@ -110,11 +108,9 @@ defmodule ToxiproxyEx do
       iex> ToxiproxyEx.get!(:test_mysql_master)
   """
   @spec get!(atom() | String.t()) :: proxy()
-  def get!(name) when is_atom(name) do
-    get!(Atom.to_string(name))
-  end
+  def get!(name) when is_atom(name) or is_binary(name) do
+    name = to_string(name)
 
-  def get!(name) do
     case Enum.find(all!().proxies, &(&1.name == name)) do
       nil -> raise ArgumentError, message: "Unknown proxy with name '#{name}'"
       proxy -> proxy
@@ -136,7 +132,7 @@ defmodule ToxiproxyEx do
       iex> ToxiproxyEx.grep!(~r/master/)
   """
   @spec grep!(Regex.t()) :: toxic_collection()
-  def grep!(pattern) do
+  def grep!(%Regex{} = pattern) do
     case Enum.filter(all!().proxies, &String.match?(&1.name, pattern)) do
       proxies = [_h | _t] -> ToxicCollection.new(proxies)
       [] -> raise ArgumentError, message: "No proxies found for regex '#{pattern}'"
@@ -441,10 +437,10 @@ defmodule ToxiproxyEx do
       iex> ToxiproxyEx.version!()
       "2.1.2"
   """
-  @spec version!() :: :ok
+  @spec version!() :: String.t()
   def version!() do
     case Client.version() do
-      {:ok, %{body: res}} -> res
+      {:ok, %{body: res}} when is_binary(res) -> res
       _ -> raise ServerError, message: "Could not fetch version"
     end
   end

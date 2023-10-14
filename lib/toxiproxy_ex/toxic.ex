@@ -3,6 +3,9 @@ defmodule ToxiproxyEx.Toxic do
 
   alias ToxiproxyEx.Client
 
+  @typedoc since: "1.2.0"
+  @type t() :: %__MODULE__{}
+
   defstruct [
     :type,
     :name,
@@ -12,7 +15,8 @@ defmodule ToxiproxyEx.Toxic do
     :toxicity
   ]
 
-  def new(fields) do
+  @spec new(keyword()) :: t()
+  def new(fields) when is_list(fields) do
     fields =
       fields
       |> maybe_put_default(:toxicity, 1.0)
@@ -43,7 +47,8 @@ defmodule ToxiproxyEx.Toxic do
     Keyword.put(fields, field, default)
   end
 
-  def create(toxic) do
+  @spec create(t()) :: {:ok, t()} | :error
+  def create(%__MODULE__{} = toxic) do
     case Client.create_toxic(toxic.proxy_name, %{
            name: toxic.name,
            type: toxic.type,
@@ -69,7 +74,8 @@ defmodule ToxiproxyEx.Toxic do
     end
   end
 
-  def destroy(toxic) do
+  @spec destroy(t()) :: :ok | :error
+  def destroy(%__MODULE__{} = toxic) do
     case Client.destroy_toxic(toxic.proxy_name, toxic.name) do
       {:ok, _res} -> :ok
       _ -> :error
