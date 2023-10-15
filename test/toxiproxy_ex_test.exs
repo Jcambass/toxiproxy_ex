@@ -208,9 +208,7 @@ defmodule ToxiproxyExTest do
       |> ToxiproxyEx.upstream(:latency, latency: 100, name: "my_upstream_toxic")
       |> ToxiproxyEx.apply!(fn ->
         # Use private API to retrieve toxics for the proxy.
-        {:ok, toxics} = Proxy.toxics(proxy)
-
-        names = Enum.map(toxics, & &1.name) |> Enum.sort()
+        names = proxy |> Proxy.toxics() |> Enum.map(& &1.name) |> Enum.sort()
         assert names == Enum.sort(["latency_downstream", "latency_upstream", "my_upstream_toxic"])
       end)
     end)

@@ -47,7 +47,7 @@ defmodule ToxiproxyEx.Toxic do
     Keyword.put(fields, field, default)
   end
 
-  @spec create(t()) :: {:ok, t()} | :error
+  @spec create(t()) :: t()
   def create(%__MODULE__{} = toxic) do
     body = %{
       name: toxic.name,
@@ -57,30 +57,24 @@ defmodule ToxiproxyEx.Toxic do
       attributes: toxic.attributes
     }
 
-    case Client.request(:post, "/proxies/#{toxic.proxy_name}/toxics", body) do
-      {:ok, %{"attributes" => attributes, "toxicity" => toxicity}} ->
-        # Note: We update attributes and toxicity to ensure that our local representation is as close as possible to the data on the server.
-        # We do not make use of those fields after `create` has been called but we update them anyway.
-        {:ok,
-         new(
-           name: toxic.name,
-           type: toxic.type,
-           stream: toxic.stream,
-           toxicity: toxicity,
-           attributes: attributes,
-           proxy_name: toxic.proxy_name
-         )}
+    %{"attributes" => attributes, "toxicity" => toxicity} =
+      Client.request!(:post, "/proxies/#{toxic.proxy_name}/toxics", body)
 
-      {:error, _reason} ->
-        :error
-    end
+    # Note: We update attributes and toxicity to ensure that our local representation is as close as possible to the data on the server.
+    # We do not make use of those fields after `create` has been called but we update them anyway.
+    new(
+      name: toxic.name,
+      type: toxic.type,
+      stream: toxic.stream,
+      toxicity: toxicity,
+      attributes: attributes,
+      proxy_name: toxic.proxy_name
+    )
   end
 
-  @spec destroy(t()) :: :ok | :error
+  @spec destroy(t()) :: :ok
   def destroy(%__MODULE__{} = toxic) do
-    case Client.request(:delete, "/proxies/#{toxic.proxy_name}/toxics/#{toxic.name}") do
-      {:ok, _body} -> :ok
-      {:error, _reason} -> :error
-    end
+    Client.request!(:delete, "/proxies/#{toxic.proxy_name}/toxics/#{toxic.name}")
+    :ok
   end
 end

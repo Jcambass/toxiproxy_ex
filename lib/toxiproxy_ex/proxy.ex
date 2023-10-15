@@ -13,23 +13,19 @@ defmodule ToxiproxyEx.Proxy do
 
   defstruct upstream: nil, listen: nil, name: nil, enabled: nil
 
-  @spec disable(t()) :: :ok | :error
+  @spec disable(t()) :: :ok
   def disable(%__MODULE__{} = proxy) do
-    case Client.request(:post, "/proxies/#{proxy.name}", %{enabled: false}) do
-      {:ok, _body} -> :ok
-      {:error, _reason} -> :error
-    end
+    Client.request!(:post, "/proxies/#{proxy.name}", %{enabled: false})
+    :ok
   end
 
-  @spec enable(t()) :: :ok | :error
+  @spec enable(t()) :: :ok
   def enable(%__MODULE__{} = proxy) do
-    case Client.request(:post, "/proxies/#{proxy.name}", %{enabled: true}) do
-      {:ok, _body} -> :ok
-      {:error, _reason} -> :error
-    end
+    Client.request!(:post, "/proxies/#{proxy.name}", %{enabled: true})
+    :ok
   end
 
-  @spec create(keyword()) :: {:ok, t()} | :error
+  @spec create(keyword()) :: t()
   def create(options) when is_list(options) do
     upstream = Keyword.get(options, :upstream)
     listen = Keyword.get(options, :listen, "localhost:0")
@@ -43,29 +39,22 @@ defmodule ToxiproxyEx.Proxy do
       enabled: enabled
     }
 
-    case Client.request(:post, "/proxies", body) do
-      {:ok, %{"listen" => listen, "enabled" => enabled, "name" => name}} ->
-        {:ok, %__MODULE__{upstream: upstream, listen: listen, name: name, enabled: enabled}}
+    %{"listen" => listen, "enabled" => enabled, "name" => name} =
+      Client.request!(:post, "/proxies", body)
 
-      {:error, _reason} ->
-        :error
-    end
+    %__MODULE__{upstream: upstream, listen: listen, name: name, enabled: enabled}
   end
 
-  @spec destroy(t()) :: :ok | :error
+  @spec destroy(t()) :: :ok
   def destroy(%__MODULE__{} = proxy) do
-    case Client.request(:delete, "/proxies/#{proxy.name}") do
-      {:ok, _body} -> :ok
-      {:error, _reason} -> :error
-    end
+    Client.request!(:delete, "/proxies/#{proxy.name}")
+    :ok
   end
 
-  @spec toxics(t()) :: {:ok, [Toxic.t()]} | :error
+  @spec toxics(t()) :: [Toxic.t()]
   def toxics(%__MODULE__{} = proxy) do
-    case Client.request(:get, "/proxies/#{proxy.name}/toxics") do
-      {:ok, _body = toxics} -> {:ok, Enum.map(toxics, &parse_toxic(&1, proxy))}
-      {:error, _reason} -> :error
-    end
+    toxics = Client.request!(:get, "/proxies/#{proxy.name}/toxics")
+    Enum.map(toxics, &parse_toxic(&1, proxy))
   end
 
   defp parse_toxic(
