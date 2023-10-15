@@ -1,11 +1,13 @@
 defmodule ToxiproxyEx.TestHelpers do
+  import ExUnit.Assertions
+
   alias ToxiproxyEx.EchoServer
 
   def connect_to_proxy(proxy) do
-    [hostname, port] = String.split(proxy.listen, ":")
+    assert [hostname, port] = String.split(proxy.listen, ":")
 
     hostname = String.to_charlist(hostname)
-    {port, _rem} = Integer.parse(port)
+    assert {port, ""} = Integer.parse(port)
 
     :gen_tcp.connect(hostname, port, [
       :binary,
@@ -26,35 +28,34 @@ defmodule ToxiproxyEx.TestHelpers do
     {duration / 1_000, res}
   end
 
-  def with_tcpservers(count, fun) do
-    servers =
+  def with_tcpservers(count, fun) when is_integer(count) do
+    parent_pid = self()
+    ref = make_ref()
+
+    tasks =
       Enum.map(1..count, fn _i ->
-        EchoServer.create()
+        task =
+          Task.async(fn ->
+            {socket, port} = EchoServer.create()
+            send(parent_pid, {:port, ref, port})
+            EchoServer.start(socket)
+          end)
+
+        assert_receive {:port, ^ref, port}
+
+        {task, port}
       end)
 
-    server_pids =
-      Enum.map(servers, fn {socket, _port} ->
-        spawn(fn ->
-          EchoServer.start(socket)
-        end)
-      end)
+    ports = Enum.map(tasks, fn {_task, port} -> port end)
 
-    ports = Enum.map(servers, fn {_socket, port} -> port end)
-
-    fun.(ports)
-
-    Enum.each(server_pids, fn pid ->
-      Process.exit(pid, :kill)
-    end)
-
-    Enum.each(servers, fn {socket, _port} ->
-      EchoServer.stop(socket)
-    end)
+    try do
+      fun.(ports)
+    after
+      Enum.each(tasks, fn {task, _port} -> Task.shutdown(task) end)
+    end
   end
 
   def with_tcpserver(fun) do
-    with_tcpservers(1, fn ports ->
-      fun.(hd(ports))
-    end)
+    with_tcpservers(1, fn [port] -> fun.(port) end)
   end
 end

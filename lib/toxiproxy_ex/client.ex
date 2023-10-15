@@ -10,7 +10,8 @@ defmodule ToxiproxyEx.Client do
              (is_nil(params) or is_map(params)) do
     middlewares = [
       {Tesla.Middleware.BaseUrl, Application.fetch_env!(:toxiproxy_ex, :host)},
-      Tesla.Middleware.JSON
+      Tesla.Middleware.JSON,
+      Tesla.Middleware.KeepRequest
     ]
 
     client = Tesla.client(middlewares, {Tesla.Adapter.Mint, []})
