@@ -287,6 +287,7 @@ defmodule ToxiproxyExTest do
 
   test "version" do
     version = ToxiproxyEx.version!()
+    assert is_binary(version)
     assert String.starts_with?(version, "2.")
   end
 

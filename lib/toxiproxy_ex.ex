@@ -396,7 +396,10 @@ defmodule ToxiproxyEx do
   """
   @spec version!() :: String.t()
   def version!() do
-    Client.request!(:get, "/version")
+    case Client.request!(:get, "/version") do
+      %{"version" => version} -> version
+      version -> version
+    end
   end
 
   @doc """
