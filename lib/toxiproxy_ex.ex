@@ -311,24 +311,29 @@ defmodule ToxiproxyEx do
       ...>  nil
       ...> end)
   """
-  @spec apply!(toxic_collection(), (-> any())) :: :ok
-  def apply!(%ToxicCollection{toxics: toxics}, fun) do
-    dups =
-      Enum.group_by(toxics, fn t -> [t.name, t.proxy_name] end)
-      |> Enum.map(fn {_group, toxics} -> toxics end)
-      |> Enum.filter(fn toxics -> length(toxics) > 1 end)
+  @spec apply!(toxic_collection(), (-> result)) :: result when result: var
+  def apply!(%ToxicCollection{toxics: toxics}, fun) when is_function(fun, 0) do
+    toxics
+    |> Enum.group_by(fn %Toxic{} = toxic -> {toxic.name, toxic.proxy_name} end)
+    |> Enum.each(fn
+      {_name_and_proxy_name, [toxic, _other_toxic | _rest]} ->
+        raise ArgumentError, """
+        there are multiple toxics with the name #{inspect(toxic.name)} for proxy \
+        #{inspect(toxic.proxy_name)}, please override the default name (<type>_<direction>)\
+        """
 
-    if Enum.empty?(dups) do
-      # Note: We probably don't care about the updated toxies here but we still use them rather than the one passed into the function.
-      toxics = Enum.map(toxics, &Toxic.create/1)
+      {_name_and_proxy_name, [_toxic]} ->
+        :ok
+    end)
 
+    # We probably don't care about the updated toxics here but we still use
+    # rather than the one passed into the function.
+    toxics = Enum.map(toxics, &Toxic.create/1)
+
+    try do
       fun.()
-
+    after
       Enum.each(toxics, &Toxic.destroy/1)
-    else
-      raise ArgumentError,
-        message:
-          "There are multiple toxics with the name '#{hd(hd(dups)).name}' for proxy '#{hd(hd(dups)).proxy_name}', please override the default name (<type>_<direction>)"
     end
   end
 

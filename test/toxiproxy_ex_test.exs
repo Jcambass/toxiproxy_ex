@@ -320,13 +320,67 @@ defmodule ToxiproxyExTest do
         |> ToxiproxyEx.downstream(:latency, latency: 100)
         |> ToxiproxyEx.downstream(:latency, latency: 100)
 
-      assert_raise ArgumentError,
-                   "There are multiple toxics with the name 'latency_downstream' for proxy 'test_echo_server', please override the default name (<type>_<direction>)",
-                   fn ->
-                     ToxiproxyEx.apply!(collection, fn ->
-                       nil
-                     end)
-                   end
+      message = """
+      there are multiple toxics with the name "latency_downstream" for proxy \
+      "test_echo_server", please override the default name (<type>_<direction>)\
+      """
+
+      assert_raise ArgumentError, message, fn ->
+        ToxiproxyEx.apply!(collection, fn ->
+          nil
+        end)
+      end
     end)
+  end
+
+  describe "apply!/2" do
+    @describetag :focus
+
+    test "destroys applied toxics if the passed function raises" do
+      with_tcpserver(fn port ->
+        proxy = ToxiproxyEx.create!(upstream: "localhost:#{port}", name: "test_echo_server")
+
+        toxic_collection =
+          proxy
+          |> ToxiproxyEx.downstream(:latency, name: "apply_raise1_downstream", latency: 100)
+          |> ToxiproxyEx.downstream(:latency, name: "apply_raise2_downstream", timeout: 1000)
+
+        assert_raise RuntimeError, "boom", fn ->
+          ToxiproxyEx.apply!(toxic_collection, fn -> raise "boom" end)
+        end
+
+        assert ToxiproxyEx.Client.request!(:get, "/proxies/#{proxy.name}/toxics") == []
+      end)
+    end
+
+    test "destroys applied toxics if the passed function exits" do
+      with_tcpserver(fn port ->
+        proxy = ToxiproxyEx.create!(upstream: "localhost:#{port}", name: "test_echo_server")
+
+        toxic_collection =
+          proxy
+          |> ToxiproxyEx.downstream(:latency, name: "apply_exit1_downstream", latency: 100)
+          |> ToxiproxyEx.downstream(:latency, name: "apply_exit2_downstream", timeout: 1000)
+
+        catch_exit(ToxiproxyEx.apply!(toxic_collection, fn -> exit(:boom) end))
+
+        assert ToxiproxyEx.Client.request!(:get, "/proxies/#{proxy.name}/toxics") == []
+      end)
+    end
+
+    test "destroys applied toxics if the passed function throws" do
+      with_tcpserver(fn port ->
+        proxy = ToxiproxyEx.create!(upstream: "localhost:#{port}", name: "test_echo_server")
+
+        toxic_collection =
+          proxy
+          |> ToxiproxyEx.downstream(:latency, name: "apply_throw1_downstream", latency: 100)
+          |> ToxiproxyEx.downstream(:latency, name: "apply_throw2_downstream", timeout: 1000)
+
+        catch_throw(ToxiproxyEx.apply!(toxic_collection, fn -> throw(:boom) end))
+
+        assert ToxiproxyEx.Client.request!(:get, "/proxies/#{proxy.name}/toxics") == []
+      end)
+    end
   end
 end
