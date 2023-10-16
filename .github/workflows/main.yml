@@ -8,6 +8,46 @@ env:
   MIX_ENV: test
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-20.04
+
+    env:
+      ELIXIR_VERSION: "1.15"
+      OTP_VERSION: "26.1"
+
+    steps:
+      - name: Check out this repository
+        uses: actions/checkout@v4
+
+      - name: Install Erlang and Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ env.OTP_VERSION }}
+          elixir-version: ${{ env.ELIXIR_VERSION}}
+
+      - name: Cache /_build and /deps
+        uses: actions/cache@v3
+        id: cache-mix
+        with:
+          path: |
+            _build
+            deps
+          key: |
+            mix-elixir${{ env.ELIXIR_VERSION }}-otp${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            mix-elixir${{ env.ELIXIR_VERSION }}-otp${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}-${{ github.run_id }}-
+            mix-elixir${{ env.ELIXIR_VERSION }}-otp${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Check for unused dependencies
+        run: mix deps.unlock --check-unused
+
+      - name: Check for formatted code
+        run: mix format --check-formatted
+
   test:
     name: Test (Erlang ${{ matrix.otp }}, Elixir ${{ matrix.elixir }}, Toxiproxy ${{ matrix.toxiproxy }})
 
@@ -50,6 +90,19 @@ jobs:
 
       - name: Start Toxiproxy
         run: nohup bash -c "./toxiproxy-server > ./toxiproxy.log 2>&1 &"
+
+      - name: Cache Mix compiled stuff
+        uses: actions/cache@v3
+        id: cache-mix
+        with:
+          path: |
+            _build
+            deps
+          key: |
+            mix-elixir${{ matrix.elixir }}-otp${{ matrix.otp }}-${{ hashFiles('mix.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            mix-elixir${{ matrix.elixir }}-otp${{ matrix.otp }}-${{ hashFiles('mix.lock') }}-${{ github.run_id }}-
+            mix-elixir${{ matrix.elixir }}-otp${{ matrix.otp }}-${{ hashFiles('mix.lock') }}-
 
       - name: Install dependencies
         run: mix deps.get
