@@ -65,7 +65,7 @@ defmodule ToxiproxyExTest do
       assert_proxy_available(proxy)
 
       # Use private API to retrieve toxics for the proxy.
-      {:ok, proxies} = Proxy.toxics(proxy)
+      proxies = Proxy.toxics(proxy)
       assert Enum.empty?(proxies)
     end)
   end

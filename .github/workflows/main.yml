@@ -3,18 +3,60 @@ on:
     branches:
       - main
   pull_request:
-  
+
+env:
+  MIX_ENV: test
+
 jobs:
   test:
+    name: Test (Erlang ${{ matrix.otp }}, Elixir ${{ matrix.elixir }}, Toxiproxy ${{ matrix.toxiproxy }})
+
     runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        toxiproxy:
+          - "2.6.0"
+          - "2.5.0"
+          - "2.1.2"
+        elixir:
+          - "1.15"
+        otp:
+          - "26.1"
+        include:
+          # Oldest supported version pair.
+          - otp: "23.3"
+            elixir: "1.10.4-otp-23"
+            toxiproxy: "2.1.2"
+
+    env:
+      TOXIPROXY_VERSION: ${{ matrix.toxiproxy }}
+
     steps:
-      - uses: actions/checkout@v2
-      - uses: erlef/setup-beam@v1
+      - name: Check out this repository
+        uses: actions/checkout@v4
+
+      - name: Install Erlang and Elixir
+        uses: erlef/setup-beam@v1
         with:
-          version-file: .tool-versions
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
           version-type: strict
-      - run: curl --silent -L https://github.com/Shopify/toxiproxy/releases/download/v2.1.2/toxiproxy-server-linux-amd64 -o ./toxiproxy-server
-      - run: chmod +x ./toxiproxy-server
-      - run: nohup bash -c "./toxiproxy-server > ./toxiproxy.log 2>&1 &"
-      - run: mix deps.get
-      - run: mix test
+
+      - name: Install Toxiproxy
+        run: |
+          curl -v -L --fail https://github.com/Shopify/toxiproxy/releases/download/v${TOXIPROXY_VERSION}/toxiproxy-server-linux-amd64 -o ./toxiproxy-server
+          chmod +x ./toxiproxy-server
+
+      - name: Start Toxiproxy
+        run: nohup bash -c "./toxiproxy-server > ./toxiproxy.log 2>&1 &"
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Run tests
+        run: mix test
+
+      - name: Dump Toxiproxy logs on failure
+        if: failure()
+        run: cat ./toxiproxy.log

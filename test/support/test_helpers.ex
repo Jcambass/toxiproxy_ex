@@ -41,7 +41,7 @@ defmodule ToxiproxyEx.TestHelpers do
             EchoServer.start(socket)
           end)
 
-        assert_receive {:port, ^ref, port}
+        assert_receive {:port, ^ref, port}, 100
 
         {task, port}
       end)
