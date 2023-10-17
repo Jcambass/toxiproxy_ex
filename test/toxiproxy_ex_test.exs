@@ -334,8 +334,6 @@ defmodule ToxiproxyExTest do
   end
 
   describe "apply!/2" do
-    @describetag :focus
-
     test "destroys applied toxics if the passed function raises" do
       with_tcpserver(fn port ->
         proxy = ToxiproxyEx.create!(upstream: "localhost:#{port}", name: "test_echo_server")
@@ -380,6 +378,40 @@ defmodule ToxiproxyExTest do
         catch_throw(ToxiproxyEx.apply!(toxic_collection, fn -> throw(:boom) end))
 
         assert ToxiproxyEx.Client.request!(:get, "/proxies/#{proxy.name}/toxics") == []
+      end)
+    end
+  end
+
+  describe "down!/2" do
+    test "destroys applied toxics if the passed function raises" do
+      with_tcpserver(fn port ->
+        proxy = ToxiproxyEx.create!(upstream: "localhost:#{port}", name: "proxy_which_is_down")
+
+        assert_raise RuntimeError, "boom", fn ->
+          ToxiproxyEx.down!(proxy, fn -> raise "boom" end)
+        end
+
+        assert %{"enabled" => true} = ToxiproxyEx.Client.request!(:get, "/proxies/#{proxy.name}")
+      end)
+    end
+
+    test "destroys applied toxics if the passed function exits" do
+      with_tcpserver(fn port ->
+        proxy = ToxiproxyEx.create!(upstream: "localhost:#{port}", name: "proxy_which_is_down")
+
+        catch_exit(ToxiproxyEx.down!(proxy, fn -> exit(:boom) end))
+
+        assert %{"enabled" => true} = ToxiproxyEx.Client.request!(:get, "/proxies/#{proxy.name}")
+      end)
+    end
+
+    test "destroys applied toxics if the passed function throws" do
+      with_tcpserver(fn port ->
+        proxy = ToxiproxyEx.create!(upstream: "localhost:#{port}", name: "proxy_which_is_down")
+
+        catch_throw(ToxiproxyEx.down!(proxy, fn -> throw(:boom) end))
+
+        assert %{"enabled" => true} = ToxiproxyEx.Client.request!(:get, "/proxies/#{proxy.name}")
       end)
     end
   end

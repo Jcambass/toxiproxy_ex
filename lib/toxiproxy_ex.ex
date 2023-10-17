@@ -360,15 +360,21 @@ defmodule ToxiproxyEx do
       ...>  nil
       ...> end)
   """
-  @spec down!(toxic_collection(), (-> any())) :: :ok
+  @spec down!(toxic_collection() | proxy(), (-> result)) :: result when result: var
+  def down!(proxy_or_collection, fun)
+
   def down!(proxy = %Proxy{}, fun) do
     down!(ToxicCollection.new(proxy), fun)
   end
 
-  def down!(%ToxicCollection{proxies: proxies}, fun) do
+  def down!(%ToxicCollection{proxies: proxies}, fun) when is_function(fun, 0) do
     Enum.each(proxies, &Proxy.disable/1)
-    fun.()
-    Enum.each(proxies, &Proxy.enable/1)
+
+    try do
+      fun.()
+    after
+      Enum.each(proxies, &Proxy.enable/1)
+    end
   end
 
   @doc """
