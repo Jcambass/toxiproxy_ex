@@ -85,7 +85,7 @@ jobs:
         uses: actions/cache@v3
         id: cache-plt
         with:
-          path: priv/plts
+          path: plts
           key: |
             plt-otp${{ env.OTP_VERSION }}-elixir${{ env.ELIXIR_VERSION }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
@@ -95,7 +95,7 @@ jobs:
       - name: Create PLTs
         if: steps.cache-plt.outputs.cache-hit != 'true'
         run: |
-          mkdir -p priv/plts
+          mkdir -p plts
           mix dialyzer --plt
 
       - name: Install dependencies
