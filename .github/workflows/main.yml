@@ -91,15 +91,15 @@ jobs:
           restore-keys: |
             plt-otp${{ env.OTP_VERSION }}-elixir${{ env.ELIXIR_VERSION }}-
 
+      - name: Install dependencies
+        run: mix deps.get
+
       # Create PLTs if no cache was found
       - name: Create PLTs
         if: steps.cache-plt.outputs.cache-hit != 'true'
         run: |
           mkdir -p plts
           mix dialyzer --plt
-
-      - name: Install dependencies
-        run: mix deps.get
 
       - name: Run Dialyzer
         run: mix dialyzer --format github
