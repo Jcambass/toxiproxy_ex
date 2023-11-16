@@ -4,6 +4,7 @@ defmodule ToxiproxyEx.Client do
   alias Tesla.Env
   alias ToxiproxyEx.ServerError
 
+  # ToxiproxyEx 3.0 TODO:
   # We can remove this once Toxiproxy will fix their stuff. See:
   # https://github.com/Shopify/toxiproxy/pull/538
   defmodule BuggyToxiproxyVersionParserMiddleware do
