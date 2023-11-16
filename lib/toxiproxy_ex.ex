@@ -1,5 +1,5 @@
 defmodule ToxiproxyEx do
-  alias ToxiproxyEx.{Proxy, Client, Toxic, ToxicCollection, ServerError}
+  alias ToxiproxyEx.{Proxy, Client, Toxic, ToxicCollection}
 
   @external_resource "README.md"
   @moduledoc "README.md"
@@ -10,12 +10,12 @@ defmodule ToxiproxyEx do
   @typedoc """
   A proxy that intercepts traffic to and from an upstream server.
   """
-  @opaque proxy :: %Proxy{}
+  @opaque proxy :: Proxy.t()
 
   @typedoc """
   A collection of proxies.
   """
-  @opaque toxic_collection :: %ToxicCollection{}
+  @opaque toxic_collection :: ToxicCollection.t()
 
   @typedoc """
   A hostname or IP address including a port number, e.g. `localhost:4539`.
@@ -54,12 +54,7 @@ defmodule ToxiproxyEx do
           listen: host_with_port() | nil,
           enabled: true | false | nil
         ) :: proxy()
-  def create!(options) do
-    case Proxy.create(options) do
-      {:ok, proxy} -> proxy
-      :error -> raise ServerError, message: "Could not create proxy"
-    end
-  end
+  defdelegate create!(options), to: Proxy, as: :create
 
   @doc """
   Deletes one or multiple proxies on the toxiproxy server.
@@ -87,14 +82,7 @@ defmodule ToxiproxyEx do
   end
 
   def destroy!(%ToxicCollection{proxies: proxies}) do
-    Enum.each(proxies, fn proxy ->
-      case Proxy.destroy(proxy) do
-        :ok -> nil
-        :error -> raise ServerError, message: "Could not destroy proxy"
-      end
-    end)
-
-    :ok
+    Enum.each(proxies, &Proxy.destroy/1)
   end
 
   @doc """
@@ -110,11 +98,9 @@ defmodule ToxiproxyEx do
       iex> ToxiproxyEx.get!(:test_mysql_master)
   """
   @spec get!(atom() | String.t()) :: proxy()
-  def get!(name) when is_atom(name) do
-    get!(Atom.to_string(name))
-  end
+  def get!(name) when is_atom(name) or is_binary(name) do
+    name = to_string(name)
 
-  def get!(name) do
     case Enum.find(all!().proxies, &(&1.name == name)) do
       nil -> raise ArgumentError, message: "Unknown proxy with name '#{name}'"
       proxy -> proxy
@@ -136,7 +122,7 @@ defmodule ToxiproxyEx do
       iex> ToxiproxyEx.grep!(~r/master/)
   """
   @spec grep!(Regex.t()) :: toxic_collection()
-  def grep!(pattern) do
+  def grep!(%Regex{} = pattern) do
     case Enum.filter(all!().proxies, &String.match?(&1.name, pattern)) do
       proxies = [_h | _t] -> ToxicCollection.new(proxies)
       [] -> raise ArgumentError, message: "No proxies found for regex '#{pattern}'"
@@ -157,10 +143,8 @@ defmodule ToxiproxyEx do
   """
   @spec all!() :: toxic_collection()
   def all!() do
-    case Client.list_proxies() do
-      {:ok, %{body: proxies}} -> Enum.map(proxies, &parse_proxy/1)
-      _ -> raise ServerError, message: "Could not fetch proxies."
-    end
+    Client.request!(:get, "/proxies")
+    |> Enum.map(&parse_proxy/1)
     |> ToxicCollection.new()
   end
 
@@ -327,39 +311,29 @@ defmodule ToxiproxyEx do
       ...>  nil
       ...> end)
   """
-  @spec apply!(toxic_collection(), (() -> any())) :: :ok
-  def apply!(%ToxicCollection{toxics: toxics}, fun) do
-    dups =
-      Enum.group_by(toxics, fn t -> [t.name, t.proxy_name] end)
-      |> Enum.map(fn {_group, toxics} -> toxics end)
-      |> Enum.filter(fn toxics -> length(toxics) > 1 end)
+  @spec apply!(toxic_collection(), (-> result)) :: result when result: var
+  def apply!(%ToxicCollection{toxics: toxics}, fun) when is_function(fun, 0) do
+    toxics
+    |> Enum.group_by(fn %Toxic{} = toxic -> {toxic.name, toxic.proxy_name} end)
+    |> Enum.each(fn
+      {_name_and_proxy_name, [toxic, _other_toxic | _rest]} ->
+        raise ArgumentError, """
+        there are multiple toxics with the name #{inspect(toxic.name)} for proxy \
+        #{inspect(toxic.proxy_name)}, please override the default name (<type>_<direction>)\
+        """
 
-    if Enum.empty?(dups) do
-      # Note: We probably don't care about the updated toxies here but we still use them rather than the one passed into the function.
-      toxics =
-        Enum.map(toxics, fn toxic ->
-          case Toxic.create(toxic) do
-            {:ok, toxic} -> toxic
-            :error -> raise ServerError, message: "Could not create toxic '#{toxic.name}'"
-          end
-        end)
+      {_name_and_proxy_name, [_toxic]} ->
+        :ok
+    end)
 
+    # We probably don't care about the updated toxics here but we still use
+    # rather than the one passed into the function.
+    toxics = Enum.map(toxics, &Toxic.create/1)
+
+    try do
       fun.()
-
-      Enum.each(toxics, fn toxic ->
-        case Toxic.destroy(toxic) do
-          :ok -> nil
-          :error -> raise ServerError, message: "Could not destroy toxic '#{toxic.name}'"
-        end
-      end)
-
-      :ok
-    else
-      raise ArgumentError,
-        message:
-          "There are multiple toxics with the name '#{hd(hd(dups)).name}' for proxy '#{
-            hd(hd(dups)).proxy_name
-          }', please override the default name (<type>_<direction>)"
+    after
+      Enum.each(toxics, &Toxic.destroy/1)
     end
   end
 
@@ -386,29 +360,21 @@ defmodule ToxiproxyEx do
       ...>  nil
       ...> end)
   """
-  @spec down!(toxic_collection(), (() -> any())) :: :ok
+  @spec down!(toxic_collection() | proxy(), (-> result)) :: result when result: var
+  def down!(proxy_or_collection, fun)
+
   def down!(proxy = %Proxy{}, fun) do
     down!(ToxicCollection.new(proxy), fun)
   end
 
-  def down!(%ToxicCollection{proxies: proxies}, fun) do
-    Enum.each(proxies, fn proxy ->
-      case Proxy.disable(proxy) do
-        :ok -> nil
-        :error -> raise ServerError, message: "Could not disable proxy '#{proxy.name}'"
-      end
-    end)
+  def down!(%ToxicCollection{proxies: proxies}, fun) when is_function(fun, 0) do
+    Enum.each(proxies, &Proxy.disable/1)
 
-    fun.()
-
-    Enum.each(proxies, fn proxy ->
-      case Proxy.enable(proxy) do
-        :ok -> nil
-        :error -> raise ServerError, message: "Could not enable proxy '#{proxy.name}'"
-      end
-    end)
-
-    :ok
+    try do
+      fun.()
+    after
+      Enum.each(proxies, &Proxy.enable/1)
+    end
   end
 
   @doc """
@@ -424,10 +390,8 @@ defmodule ToxiproxyEx do
   """
   @spec reset!() :: :ok
   def reset!() do
-    case Client.reset() do
-      {:ok, _} -> :ok
-      _ -> raise ServerError, message: "Could not reset toxiproxy"
-    end
+    Client.request!(:post, "/reset", %{})
+    :ok
   end
 
   @doc """
@@ -441,11 +405,11 @@ defmodule ToxiproxyEx do
       iex> ToxiproxyEx.version!()
       "2.1.2"
   """
-  @spec version!() :: :ok
+  @spec version!() :: String.t()
   def version!() do
-    case Client.version() do
-      {:ok, %{body: res}} -> res
-      _ -> raise ServerError, message: "Could not fetch version"
+    case Client.request!(:get, "/version") do
+      %{"version" => version} -> version
+      version -> version
     end
   end
 

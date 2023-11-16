@@ -1,19 +1,32 @@
 defmodule ToxiproxyEx.ProxyAssertions do
-  defmacro assert_proxy_available(proxy) do
-    quote do
-      case connect_to_proxy(unquote(proxy)) do
-        {:ok, _socket} -> assert true
-        _ -> flunk("Proxy #{unquote(proxy).name} is not available but should be")
-      end
+  import ExUnit.Assertions
+
+  alias ToxiproxyEx.Proxy
+  alias ToxiproxyEx.TestHelpers
+
+  def assert_proxy_available(%Proxy{} = proxy) do
+    case TestHelpers.connect_to_proxy(proxy) do
+      {:ok, socket} ->
+        :gen_tcp.close(socket)
+
+      {:error, reason} ->
+        flunk("""
+        Proxy #{proxy.name} (shown below) should be available, but is not: \
+        #{:inet.format_error(reason)}
+
+          #{inspect(proxy)}
+        """)
     end
   end
 
-  defmacro assert_proxy_unavailable(proxy) do
-    quote do
-      case connect_to_proxy(unquote(proxy)) do
-        {:error, :econnrefused} -> assert true
-        _ -> flunk("Proxy #{unquote(proxy).name} is available but should not be")
-      end
+  def assert_proxy_unavailable(%Proxy{} = proxy) do
+    case TestHelpers.connect_to_proxy(proxy) do
+      {:error, :econnrefused} ->
+        :ok
+
+      {:ok, socket} ->
+        :gen_tcp.close(socket)
+        flunk("Proxy #{proxy.name} is available but should not be")
     end
   end
 end

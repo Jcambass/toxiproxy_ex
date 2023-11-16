@@ -12,6 +12,13 @@ defmodule ToxiproxyEx.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
 
+      # Dialyzer
+      dialyzer: [
+        plt_local_path: "plts",
+        plt_core_path: "plts",
+        plt_add_apps: [:ssl, :crypto, :mix, :ex_unit, :erts, :kernel, :stdlib]
+      ],
+
       # Hex
       description: "Elixir Client for Toxiproxy",
       package: package(),
@@ -23,7 +30,8 @@ defmodule ToxiproxyEx.MixProject do
 
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [],
+      env: [host: "http://127.0.0.1:8474"]
     ]
   end
 
@@ -33,9 +41,13 @@ defmodule ToxiproxyEx.MixProject do
       {:jason, ">= 1.0.0"},
       {:castore, "~> 1.0.3"},
       {:mint, "~> 1.0"},
-      {:ex_doc, "~> 0.23", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
-    ]
+      {:ex_doc, "~> 0.23", only: :dev, runtime: false}
+    ] ++
+      if Version.match?(System.version(), "~> 1.12") do
+        [{:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}]
+      else
+        []
+      end
   end
 
   defp package do

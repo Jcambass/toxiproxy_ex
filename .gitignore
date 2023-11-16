@@ -22,3 +22,5 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 toxiproxy_ex-*.tar
 
+# Dialyzer PLTs.
+/plts

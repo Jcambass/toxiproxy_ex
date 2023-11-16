@@ -3,18 +3,169 @@ on:
     branches:
       - main
   pull_request:
-  
+
+env:
+  MIX_ENV: test
+
 jobs:
-  test:
+  lint:
+    name: Lint
     runs-on: ubuntu-20.04
+
+    env:
+      ELIXIR_VERSION: "1.15"
+      OTP_VERSION: "26.1"
+
     steps:
-      - uses: actions/checkout@v2
-      - uses: erlef/setup-beam@v1
+      - name: Check out this repository
+        uses: actions/checkout@v4
+
+      - name: Install Erlang and Elixir
+        uses: erlef/setup-beam@v1
         with:
-          version-file: .tool-versions
+          otp-version: ${{ env.OTP_VERSION }}
+          elixir-version: ${{ env.ELIXIR_VERSION}}
+
+      - name: Cache Mix compiled stuff
+        uses: actions/cache@v3
+        id: cache-mix
+        with:
+          path: |
+            _build
+            deps
+          key: |
+            mix-elixir${{ env.ELIXIR_VERSION }}-otp${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            mix-elixir${{ env.ELIXIR_VERSION }}-otp${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}-${{ github.run_id }}-
+            mix-elixir${{ env.ELIXIR_VERSION }}-otp${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Check for unused dependencies
+        run: mix deps.unlock --check-unused
+
+      - name: Check for formatted code
+        run: mix format --check-formatted
+
+  dialyzer:
+    name: Dialyze
+    runs-on: ubuntu-20.04
+
+    env:
+      ELIXIR_VERSION: "1.15"
+      OTP_VERSION: "26.1"
+
+    steps:
+      - name: Check out this repository
+        uses: actions/checkout@v4
+
+      - name: Install Erlang and Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ env.OTP_VERSION }}
+          elixir-version: ${{ env.ELIXIR_VERSION}}
+
+      - name: Cache Mix compiled stuff
+        uses: actions/cache@v3
+        id: cache-mix
+        with:
+          path: |
+            _build
+            deps
+          key: |
+            mix-elixir${{ env.ELIXIR_VERSION }}-otp${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            mix-elixir${{ env.ELIXIR_VERSION }}-otp${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}-${{ github.run_id }}-
+            mix-elixir${{ env.ELIXIR_VERSION }}-otp${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}-
+
+      # Don't cache PLTs based on mix.lock hash, as Dialyzer can incrementally update even old
+      # ones. Cache key based on Elixir and Erlang version (also useful when running in matrix).
+      - name: Cache Dialyzer's PLT
+        uses: actions/cache@v3
+        id: cache-plt
+        with:
+          path: plts
+          key: |
+            plt-otp${{ env.OTP_VERSION }}-elixir${{ env.ELIXIR_VERSION }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            plt-otp${{ env.OTP_VERSION }}-elixir${{ env.ELIXIR_VERSION }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      # Create PLTs if no cache was found
+      - name: Create PLTs
+        if: steps.cache-plt.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p plts
+          mix dialyzer --plt
+
+      - name: Run Dialyzer
+        run: mix dialyzer --format github
+
+  test:
+    name: Test (Erlang ${{ matrix.otp }}, Elixir ${{ matrix.elixir }}, Toxiproxy ${{ matrix.toxiproxy }})
+
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        toxiproxy:
+          - "2.6.0"
+          - "2.5.0"
+          - "2.1.2"
+        elixir:
+          - "1.15"
+        otp:
+          - "26.1"
+        include:
+          # Oldest supported version pair.
+          - otp: "23.3"
+            elixir: "1.10.4-otp-23"
+            toxiproxy: "2.1.2"
+
+    env:
+      TOXIPROXY_VERSION: ${{ matrix.toxiproxy }}
+
+    steps:
+      - name: Check out this repository
+        uses: actions/checkout@v4
+
+      - name: Install Erlang and Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
           version-type: strict
-      - run: curl --silent -L https://github.com/Shopify/toxiproxy/releases/download/v2.1.2/toxiproxy-server-linux-amd64 -o ./toxiproxy-server
-      - run: chmod +x ./toxiproxy-server
-      - run: nohup bash -c "./toxiproxy-server > ./toxiproxy.log 2>&1 &"
-      - run: mix deps.get
-      - run: mix test
+
+      - name: Install Toxiproxy
+        run: |
+          curl -v -L --fail https://github.com/Shopify/toxiproxy/releases/download/v${TOXIPROXY_VERSION}/toxiproxy-server-linux-amd64 -o ./toxiproxy-server
+          chmod +x ./toxiproxy-server
+
+      - name: Start Toxiproxy
+        run: nohup bash -c "./toxiproxy-server > ./toxiproxy.log 2>&1 &"
+
+      - name: Cache Mix compiled stuff
+        uses: actions/cache@v3
+        id: cache-mix
+        with:
+          path: |
+            _build
+            deps
+          key: |
+            mix-elixir${{ matrix.elixir }}-otp${{ matrix.otp }}-${{ hashFiles('mix.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            mix-elixir${{ matrix.elixir }}-otp${{ matrix.otp }}-${{ hashFiles('mix.lock') }}-${{ github.run_id }}-
+            mix-elixir${{ matrix.elixir }}-otp${{ matrix.otp }}-${{ hashFiles('mix.lock') }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Run tests
+        run: mix test
+
+      - name: Dump Toxiproxy logs on failure
+        if: failure()
+        run: cat ./toxiproxy.log
