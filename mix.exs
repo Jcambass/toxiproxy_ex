@@ -37,9 +37,9 @@ defmodule ToxiproxyEx.MixProject do
 
   defp deps do
     [
-      {:tesla, "~> 1.15.2"},
-      {:jason, ">= 1.0.0"},
-      {:castore, "~> 1.0.3"},
+      {:tesla, "~> 1.3"},
+      {:jason, "~> 1.0"},
+      {:castore, "~> 1.0"},
       {:mint, "~> 1.0"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false}
     ] ++
