@@ -10,7 +10,7 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     env:
       ELIXIR_VERSION: "1.15"
@@ -50,7 +50,7 @@ jobs:
 
   dialyzer:
     name: Dialyze
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     env:
       ELIXIR_VERSION: "1.15"
@@ -107,7 +107,7 @@ jobs:
   test:
     name: Test (Erlang ${{ matrix.otp }}, Elixir ${{ matrix.elixir }}, Toxiproxy ${{ matrix.toxiproxy }})
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
