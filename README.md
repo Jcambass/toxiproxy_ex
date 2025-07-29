@@ -130,7 +130,7 @@ by adding `toxiproxy_ex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:toxiproxy_ex, "~> 2.0.0", only: :test}
+    {:toxiproxy_ex, "~> 2.0", only: :test}
   ]
 end
 ```
