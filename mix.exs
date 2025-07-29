@@ -6,7 +6,7 @@ defmodule ToxiproxyEx.MixProject do
   def project do
     [
       app: :toxiproxy_ex,
-      version: "1.1.1",
+      version: "2.0.1",
       elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
