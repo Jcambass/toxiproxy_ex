@@ -122,7 +122,7 @@ jobs:
         include:
           # Oldest supported version pair.
           - otp: "OTP-24.3.4"
-            elixir: "1.12-otp-24"
+            elixir: "1.11-otp-24"
             toxiproxy: "2.1.2"
 
     env:
